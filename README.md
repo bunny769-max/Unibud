@@ -27,6 +27,19 @@ Real Bluetooth only: a feature is shown as available only when a real source rep
 
 All control actions go through `ControlGateway`, which returns `NotSupported` unless a real controller handles the feature.
 
+## Build an APK without Android Studio
+Push to `main` and GitHub Actions (`.github/workflows/build-apk.yml`) runs the unit tests and builds an optimized
+release APK. Download it from the run's Artifacts (`unibud-release-apk`) and install it on your phone.
+The release build is signed with the debug key so it installs for personal use. Make your own keystore before publishing.
+
+## Phone optimizations
+- Release builds use R8 code shrinking and resource shrinking, plus the profile installer for faster starts.
+- Scan results reach the UI at most every 300 ms, so busy Bluetooth areas do not make the screen stutter.
+- The radar animation runs only while a scan is active. Scans stop on their own after 12 seconds.
+- Paired devices are read off the main thread.
+- Status and navigation bar icons follow the app theme. Content is capped at 640 dp wide for landscape and foldables.
+- Judge smoothness on the release build. Compose debug builds are much slower.
+
 ## Honest limits
 - Android does not let apps connect or disconnect audio devices, so those buttons open Bluetooth settings.
 - Per-earbud and case battery, ANC, EQ, touch controls and low latency need a manufacturer protocol.

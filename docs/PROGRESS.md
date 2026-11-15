@@ -5,6 +5,7 @@ App: UniBud (repo `unibud`), package `com.unibud.app`. Android, Kotlin, Compose,
 - [x] Stage 1: Bluetooth core (scan, identify, connection monitor, GATT probe), capability resolver, control gateway
 - [x] Stage 2: Room database (device profiles and features, EQ presets, settings) and repositories
 - [x] Stage 3: UI (theme, placeholder splash and welcome, navigation, Home, Devices, Control, Audio, Info, Settings)
+- [x] Phone optimization pass: throttled scan updates, release shrinking, CI APK workflow
 - [ ] Stage 4: Firebase Auth (Google Sign-In), Firestore sync + security rules, optional Storage backup.
       Never upload pairing keys or raw Bluetooth data. Hash device addresses before they go to the cloud.
 - [ ] Stage 5: first manufacturer integration(s) using documented or authorized protocols, tests on real devices

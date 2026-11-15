@@ -21,6 +21,7 @@ import com.unibud.app.core.model.DeviceKind
 import com.unibud.app.core.model.DiscoveredDevice
 import com.unibud.app.core.model.ThemeMode
 import com.unibud.app.core.registry.DeviceListPolicy
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -109,9 +110,12 @@ class AppViewModel(private val app: Application) : AndroidViewModel(app) {
 
     fun refreshBonded() {
         if (!BluetoothPermissions.hasAll(app)) return
-        val bonded = scanner.bonded().filter(DeviceListPolicy::isRelevant)
-        _state.update { it.copy(bonded = bonded) }
-        autoSelect()
+        // Reading paired devices is a binder call, so keep it off the main thread.
+        viewModelScope.launch(Dispatchers.Default) {
+            val bonded = scanner.bonded().filter(DeviceListPolicy::isRelevant)
+            _state.update { it.copy(bonded = bonded) }
+            autoSelect()
+        }
     }
 
     /** When a paired audio device connects, identify it automatically. */

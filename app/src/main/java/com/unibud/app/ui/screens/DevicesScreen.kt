@@ -15,6 +15,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -76,7 +77,7 @@ fun DevicesScreen(
         }
 
         SectionTitle("Nearby and paired")
-        val devices = state.visibleDevices
+        val devices = remember(state.scanResults, state.bonded) { state.visibleDevices }
         if (devices.isEmpty()) {
             Text(
                 if (state.permissionGranted) "No audio devices yet. Scan to look nearby." else "Allow Bluetooth access to see devices.",

@@ -1,6 +1,9 @@
 package com.unibud.app.ui
 
+import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.BackHandler
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
@@ -17,6 +20,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Bluetooth
 import androidx.compose.material.icons.rounded.GraphicEq
@@ -34,6 +38,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -44,6 +49,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
@@ -65,6 +71,9 @@ import com.unibud.app.ui.theme.appBackground
 import kotlinx.coroutines.delay
 
 private enum class Stage { SPLASH, WELCOME, MAIN }
+
+/** Keeps content readable in landscape and on foldables instead of stretching edge to edge. */
+private val ContentMaxWidth = 640.dp
 
 private enum class Tab(val label: String, val icon: ImageVector) {
     HOME("Home", Icons.Rounded.Home),
@@ -88,6 +97,19 @@ fun AppRoot(vm: AppViewModel = viewModel()) {
         else -> systemDark
     }
 
+    // Make status and navigation bar icons follow the app theme, not only the phone's theme.
+    val activity = LocalContext.current as? ComponentActivity
+    DisposableEffect(dark) {
+        val bars = if (dark) {
+            SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
+        } else {
+            SystemBarStyle.light(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT)
+        }
+        activity?.enableEdgeToEdge(statusBarStyle = bars, navigationBarStyle = bars)
+        onDispose { }
+    }
+    val background = remember(dark) { appBackground(dark) }
+
     val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
         vm.onPermissionChanged(result.isNotEmpty() && result.values.all { it })
     }
@@ -95,13 +117,13 @@ fun AppRoot(vm: AppViewModel = viewModel()) {
 
     var splashDone by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(Unit) {
-        delay(1600)
+        delay(1200)
         splashDone = true
     }
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { vm.onResume() }
 
     UniBudTheme(dark) {
-        Box(Modifier.fillMaxSize().background(appBackground(dark))) {
+        Box(Modifier.fillMaxSize().background(background)) {
             val current = settings
             val stage = when {
                 current == null || !splashDone -> Stage.SPLASH
@@ -159,9 +181,9 @@ private fun MainShell(
             }
         },
     ) { padding ->
-        Column(Modifier.padding(padding).fillMaxSize()) {
+        Column(Modifier.padding(padding).fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
             Row(
-                Modifier.fillMaxWidth().padding(start = 24.dp, end = 12.dp, top = 8.dp, bottom = 4.dp),
+                Modifier.widthIn(max = ContentMaxWidth).fillMaxWidth().padding(start = 24.dp, end = 12.dp, top = 8.dp, bottom = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
@@ -175,6 +197,7 @@ private fun MainShell(
             }
             AnimatedContent(
                 targetState = if (showSettings) null else tab,
+                modifier = Modifier.widthIn(max = ContentMaxWidth),
                 transitionSpec = {
                     (fadeIn(tween(260)) + slideInVertically(tween(260)) { it / 24 }) togetherWith fadeOut(tween(160))
                 },

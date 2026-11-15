@@ -137,10 +137,21 @@ fun BatteryGauge(label: String, percent: Int?, modifier: Modifier = Modifier) {
     }
 }
 
-/** Expanding rings while [active]. Motion appears only while a scan is really running. */
+/** Expanding rings while [active]. The animation only exists while a scan is really running. */
 @Composable
 fun RadarScan(active: Boolean, modifier: Modifier = Modifier) {
     val color = MaterialTheme.colorScheme.primary
+    Box(modifier.size(170.dp), contentAlignment = Alignment.Center) {
+        Canvas(Modifier.fillMaxSize()) {
+            drawCircle(color.copy(alpha = 0.10f), radius = size.minDimension / 2 * 0.34f)
+        }
+        if (active) RadarRings(color)
+        Icon(Icons.Rounded.Bluetooth, contentDescription = null, tint = color, modifier = Modifier.size(36.dp))
+    }
+}
+
+@Composable
+private fun RadarRings(color: Color) {
     val transition = rememberInfiniteTransition(label = "radar")
     val phase by transition.animateFloat(
         initialValue = 0f,
@@ -148,21 +159,15 @@ fun RadarScan(active: Boolean, modifier: Modifier = Modifier) {
         animationSpec = infiniteRepeatable(tween(2600, easing = LinearEasing), RepeatMode.Restart),
         label = "phase",
     )
-    Box(modifier.size(170.dp), contentAlignment = Alignment.Center) {
-        Canvas(Modifier.fillMaxSize()) {
-            val maxRadius = size.minDimension / 2
-            drawCircle(color.copy(alpha = 0.10f), radius = maxRadius * 0.34f)
-            if (active) {
-                repeat(3) { i ->
-                    val p = (phase + i / 3f) % 1f
-                    drawCircle(
-                        color = color.copy(alpha = (1f - p) * 0.55f),
-                        radius = maxRadius * (0.34f + 0.66f * p),
-                        style = Stroke(width = 2.dp.toPx()),
-                    )
-                }
-            }
+    Canvas(Modifier.fillMaxSize()) {
+        val maxRadius = size.minDimension / 2
+        repeat(3) { i ->
+            val p = (phase + i / 3f) % 1f
+            drawCircle(
+                color = color.copy(alpha = (1f - p) * 0.55f),
+                radius = maxRadius * (0.34f + 0.66f * p),
+                style = Stroke(width = 2.dp.toPx()),
+            )
         }
-        Icon(Icons.Rounded.Bluetooth, contentDescription = null, tint = color, modifier = Modifier.size(36.dp))
     }
 }

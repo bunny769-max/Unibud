@@ -23,6 +23,7 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.launch
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Layers 1 and 2 discovery: bonded devices + Bluetooth Classic discovery + BLE scan, merged
@@ -66,7 +67,12 @@ class BluetoothScanner(private val context: Context) {
 
         val found = ConcurrentHashMap<String, DiscoveredDevice>()
 
-        fun publish() {
+        // Radios can report dozens of advertisements per second. Collapse them into at most one
+        // list update every PUBLISH_INTERVAL_MS so the UI is not recomposed on every packet.
+        val dirty = AtomicBoolean(false)
+
+        fun flush() {
+            if (!dirty.getAndSet(false)) return
             val sorted = found.values.sortedWith(
                 compareBy<DiscoveredDevice>(
                     { it.classification.kind != DeviceKind.TWS_EARBUDS },
@@ -75,6 +81,10 @@ class BluetoothScanner(private val context: Context) {
                 ),
             )
             trySend(sorted)
+        }
+
+        fun publish() {
+            dirty.set(true)
         }
 
         fun upsert(
@@ -158,8 +168,16 @@ class BluetoothScanner(private val context: Context) {
         )
 
         publish()
+        flush()
+        launch {
+            while (true) {
+                delay(PUBLISH_INTERVAL_MS)
+                flush()
+            }
+        }
         launch {
             delay(durationMs)
+            flush()
             close()
         }
 
@@ -169,4 +187,8 @@ class BluetoothScanner(private val context: Context) {
             runCatching { context.unregisterReceiver(receiver) }
         }
     }.conflate()
+
+    private companion object {
+        const val PUBLISH_INTERVAL_MS = 300L
+    }
 }
