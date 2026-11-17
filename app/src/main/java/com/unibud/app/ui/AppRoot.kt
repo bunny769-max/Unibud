@@ -3,8 +3,8 @@ package com.unibud.app.ui
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.BackHandler
-import androidx.activity.enableEdgeToEdge
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
@@ -16,23 +16,19 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Bluetooth
 import androidx.compose.material.icons.rounded.GraphicEq
+import androidx.compose.material.icons.rounded.Devices
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Person
-import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -58,37 +54,48 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.unibud.app.core.bluetooth.BluetoothPermissions
 import com.unibud.app.core.model.AppSettings
 import com.unibud.app.core.model.ThemeMode
+import com.unibud.app.ui.components.NeoTopBar
 import com.unibud.app.ui.screens.AudioStudioScreen
-import com.unibud.app.ui.screens.ControlScreen
+import com.unibud.app.ui.screens.ControlCenterScreen
 import com.unibud.app.ui.screens.DevicesScreen
 import com.unibud.app.ui.screens.HomeScreen
 import com.unibud.app.ui.screens.InfoScreen
-import com.unibud.app.ui.screens.SettingsScreen
+import com.unibud.app.ui.screens.ProfileScreen
+import com.unibud.app.ui.screens.SignInScreen
 import com.unibud.app.ui.screens.SplashScreen
-import com.unibud.app.ui.screens.WelcomeScreen
+import com.unibud.app.ui.theme.Neo
 import com.unibud.app.ui.theme.UniBudTheme
-import com.unibud.app.ui.theme.appBackground
 import kotlinx.coroutines.delay
 
-private enum class Stage { SPLASH, WELCOME, MAIN }
+private enum class Stage { SPLASH, SIGN_IN, MAIN }
+
+/** Main pages. CONTROL is reached from Home and has no tab of its own, like in the design. */
+private enum class Page(val title: String) {
+    HOME("Home"), DEVICES("Devices"), AUDIO("Audio Studio"), INFO("Device Information"),
+    PROFILE("Profile and Settings"), CONTROL("Control Center"),
+}
+
+private class TabItem(val page: Page, val label: String, val icon: ImageVector)
+
+private val tabs = listOf(
+    TabItem(Page.HOME, "Home", Icons.Rounded.Home),
+    TabItem(Page.DEVICES, "Devices", Icons.Rounded.Devices),
+    TabItem(Page.AUDIO, "Audio", Icons.Rounded.GraphicEq),
+    TabItem(Page.INFO, "Info", Icons.Rounded.Info),
+    TabItem(Page.PROFILE, "Profile", Icons.Rounded.Person),
+)
 
 /** Keeps content readable in landscape and on foldables instead of stretching edge to edge. */
 private val ContentMaxWidth = 640.dp
-
-private enum class Tab(val label: String, val icon: ImageVector) {
-    HOME("Home", Icons.Rounded.Home),
-    DEVICES("Devices", Icons.Rounded.Bluetooth),
-    CONTROL("Control", Icons.Rounded.Tune),
-    AUDIO("Audio", Icons.Rounded.GraphicEq),
-    INFO("Info", Icons.Rounded.Info),
-}
 
 @Composable
 fun AppRoot(vm: AppViewModel = viewModel()) {
     val state by vm.state.collectAsStateWithLifecycle()
     val settings by vm.settings.collectAsStateWithLifecycle()
+    val user by vm.authUser.collectAsStateWithLifecycle()
     val saved by vm.savedDevices.collectAsStateWithLifecycle()
     val presets by vm.customPresets.collectAsStateWithLifecycle()
+    val context = LocalContext.current
 
     val systemDark = isSystemInDarkTheme()
     val dark = when (settings?.themeMode) {
@@ -98,7 +105,7 @@ fun AppRoot(vm: AppViewModel = viewModel()) {
     }
 
     // Make status and navigation bar icons follow the app theme, not only the phone's theme.
-    val activity = LocalContext.current as? ComponentActivity
+    val activity = context as? ComponentActivity
     DisposableEffect(dark) {
         val bars = if (dark) {
             SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
@@ -108,7 +115,6 @@ fun AppRoot(vm: AppViewModel = viewModel()) {
         activity?.enableEdgeToEdge(statusBarStyle = bars, navigationBarStyle = bars)
         onDispose { }
     }
-    val background = remember(dark) { appBackground(dark) }
 
     val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
         vm.onPermissionChanged(result.isNotEmpty() && result.values.all { it })
@@ -117,17 +123,18 @@ fun AppRoot(vm: AppViewModel = viewModel()) {
 
     var splashDone by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(Unit) {
-        delay(1200)
+        delay(1900)
         splashDone = true
     }
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { vm.onResume() }
 
     UniBudTheme(dark) {
-        Box(Modifier.fillMaxSize().background(background)) {
+        val colors = Neo.colors
+        Box(Modifier.fillMaxSize().background(colors.background)) {
             val current = settings
             val stage = when {
                 current == null || !splashDone -> Stage.SPLASH
-                !current.onboarded -> Stage.WELCOME
+                !current.onboarded -> Stage.SIGN_IN
                 else -> Stage.MAIN
             }
             AnimatedContent(
@@ -137,11 +144,21 @@ fun AppRoot(vm: AppViewModel = viewModel()) {
             ) { target ->
                 when (target) {
                     Stage.SPLASH -> SplashScreen()
-                    Stage.WELCOME -> WelcomeScreen(onStart = {
-                        vm.completeOnboarding()
-                        if (!BluetoothPermissions.hasAll(vm.getApplication<android.app.Application>())) requestPermission()
-                    })
-                    Stage.MAIN -> MainShell(vm, state, current ?: AppSettings(), saved, presets, requestPermission)
+                    Stage.SIGN_IN -> SignInScreen(
+                        busy = state.signingIn,
+                        configured = vm.authConfigured,
+                        onGoogle = {
+                            vm.signIn(context) {
+                                vm.completeOnboarding()
+                                if (!BluetoothPermissions.hasAll(context)) requestPermission()
+                            }
+                        },
+                        onSkip = {
+                            vm.completeOnboarding()
+                            if (!BluetoothPermissions.hasAll(context)) requestPermission()
+                        },
+                    )
+                    Stage.MAIN -> MainShell(vm, state, current ?: AppSettings(), user, saved, presets, requestPermission)
                 }
             }
         }
@@ -153,15 +170,17 @@ private fun MainShell(
     vm: AppViewModel,
     state: AppUiState,
     settings: AppSettings,
+    user: com.unibud.app.data.cloud.AuthUser?,
     saved: List<com.unibud.app.core.model.SavedDevice>,
     presets: List<com.unibud.app.core.audio.EqPreset>,
     requestPermission: () -> Unit,
 ) {
-    var tab by rememberSaveable { mutableStateOf(Tab.HOME) }
-    var showSettings by rememberSaveable { mutableStateOf(false) }
+    val c = Neo.colors
+    val context = LocalContext.current
+    var page by rememberSaveable { mutableStateOf(Page.HOME) }
     val snackbar = remember { SnackbarHostState() }
     LaunchedEffect(Unit) { vm.events.collect { snackbar.showSnackbar(it) } }
-    BackHandler(enabled = showSettings) { showSettings = false }
+    BackHandler(enabled = page != Page.HOME) { page = Page.HOME }
 
     val selectedSaved = saved.firstOrNull { it.address == state.selected?.address }
 
@@ -169,60 +188,80 @@ private fun MainShell(
         containerColor = Color.Transparent,
         snackbarHost = { SnackbarHost(snackbar) },
         bottomBar = {
-            NavigationBar(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.88f)) {
-                Tab.entries.forEach { t ->
+            NavigationBar(containerColor = c.bgBottom.copy(alpha = 0.92f)) {
+                tabs.forEach { tab ->
                     NavigationBarItem(
-                        selected = !showSettings && tab == t,
-                        onClick = { showSettings = false; tab = t },
-                        icon = { Icon(t.icon, contentDescription = t.label) },
-                        label = { Text(t.label) },
+                        selected = page == tab.page || (page == Page.CONTROL && tab.page == Page.HOME),
+                        onClick = { page = tab.page },
+                        icon = { Icon(tab.icon, contentDescription = tab.label) },
+                        label = { Text(tab.label) },
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = Color.White, selectedTextColor = Color.White,
+                            indicatorColor = c.violet.copy(alpha = 0.45f),
+                            unselectedIconColor = c.textDim, unselectedTextColor = c.textDim,
+                        ),
                     )
                 }
             }
         },
     ) { padding ->
         Column(Modifier.padding(padding).fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
-            Row(
-                Modifier.widthIn(max = ContentMaxWidth).fillMaxWidth().padding(start = 24.dp, end = 12.dp, top = 8.dp, bottom = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    if (showSettings) "Profile and settings" else tab.label,
-                    style = MaterialTheme.typography.headlineMedium,
-                    modifier = Modifier.weight(1f),
-                )
-                IconButton(onClick = { showSettings = !showSettings }) {
-                    Icon(Icons.Rounded.Person, contentDescription = "Profile and settings")
+            if (page != Page.HOME) {
+                Box(Modifier.widthIn(max = ContentMaxWidth)) {
+                    NeoTopBar(
+                        title = page.title,
+                        onBack = { page = Page.HOME },
+                        onTrailing = if (page == Page.PROFILE) null else ({ page = Page.PROFILE }),
+                    )
                 }
             }
             AnimatedContent(
-                targetState = if (showSettings) null else tab,
+                targetState = page,
                 modifier = Modifier.widthIn(max = ContentMaxWidth),
                 transitionSpec = {
                     (fadeIn(tween(260)) + slideInVertically(tween(260)) { it / 24 }) togetherWith fadeOut(tween(160))
                 },
-                label = "tab",
+                label = "page",
             ) { target ->
                 when (target) {
-                    null -> SettingsScreen(settings, state.permissionGranted, vm::setTheme, requestPermission)
-                    Tab.HOME -> HomeScreen(
+                    Page.HOME -> HomeScreen(
                         state = state,
                         displayName = selectedSaved?.displayName,
-                        onGoToDevices = { tab = Tab.DEVICES },
+                        signedIn = user != null,
+                        onProfile = { page = Page.PROFILE },
+                        onDevices = { page = Page.DEVICES },
+                        onControl = { page = Page.CONTROL },
+                        onAudio = { page = Page.AUDIO },
                         onRequestPermission = requestPermission,
-                        onExecute = vm::execute,
+                        onExecute = { vm.execute(it) },
+                        onVolume = vm::setVolume,
+                        onMedia = vm::media,
                     )
-                    Tab.DEVICES -> DevicesScreen(
+                    Page.DEVICES -> DevicesScreen(
                         state = state,
                         saved = saved,
                         onScan = vm::scan,
                         onRequestPermission = requestPermission,
                         onPair = vm::pair,
-                        onInspect = { device -> vm.select(device); tab = Tab.INFO },
+                        onInspect = { device -> vm.select(device); page = Page.INFO },
                     )
-                    Tab.CONTROL -> ControlScreen(state.report, vm::execute)
-                    Tab.AUDIO -> AudioStudioScreen(state.report, presets, vm::savePreset, vm::deletePreset, vm::execute)
-                    Tab.INFO -> InfoScreen(state, selectedSaved, vm::rename, vm::forget, vm::refreshReport)
+                    Page.CONTROL -> ControlCenterScreen(state.report) { vm.execute(it) }
+                    Page.AUDIO -> AudioStudioScreen(state.report, presets, vm::savePreset, vm::deletePreset) { vm.execute(it) }
+                    Page.INFO -> InfoScreen(state, selectedSaved, vm::rename, vm::setBrand, vm::forget, vm::refreshReport)
+                    Page.PROFILE -> ProfileScreen(
+                        user = user,
+                        settings = settings,
+                        deviceCount = saved.size,
+                        permissionGranted = state.permissionGranted,
+                        signingIn = state.signingIn,
+                        syncing = state.syncing,
+                        onSignIn = { vm.signIn(context) },
+                        onSignOut = { vm.signOut(context) },
+                        onSync = vm::syncNow,
+                        onTheme = vm::setTheme,
+                        onDevices = { page = Page.DEVICES },
+                        onRequestPermission = requestPermission,
+                    )
                 }
             }
         }

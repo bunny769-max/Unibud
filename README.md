@@ -10,12 +10,23 @@ Real Bluetooth only: a feature is shown as available only when a real source rep
 3. Follow the welcome screen, allow Bluetooth access, then connect earbuds in Android settings. UniBud identifies them on its own.
 
 ## What works now
-- **Home:** connected device, battery gauges, sound-mode buttons.
-- **Devices:** animated scan, pair through Android's own dialog, details, saved devices.
-- **Control:** every feature with an honest status and reason. Controls stay off unless a real integration exists.
-- **Audio:** equalizer preset editor with local saving. Applying to earbuds needs a device that supports it.
-- **Info:** model/firmware from standard BLE services, full capability list, rename a device.
-- **Profile and settings:** light/dark/match phone, privacy, Bluetooth permission. Google sign-in is a disabled placeholder until Stage 4.
+- **Splash and sign-in:** animated logo, particles and waves. Google sign-in through Firebase (needs `google-services.json`, see `docs/FIREBASE_SETUP.md`), or continue without an account.
+- **Home:** connection card, earbuds hero with left/right/case battery, active mode, sound-mode tiles, quick controls, and playback with volume.
+- **Devices:** animated radar scan, pair through Android's own dialog, saved devices.
+- **Control Center:** every feature with an honest status and reason. Controls stay off unless a real integration exists.
+- **Audio Studio:** vertical 5-band equalizer, presets, bass and treble, save presets locally and to the cloud.
+- **Device Information:** brand and how it was detected, model, firmware, audio output details, full capability list, rename and set brand.
+- **Profile and settings:** Google account, cloud sync, appearance (match phone, dark, light), privacy, Bluetooth permission.
+
+## Controls that work on any earbuds
+Volume and play, pause, next, previous go through Android's own audio system, so they work on every Bluetooth earbud
+while it is the active audio output. Everything inside the earbuds' firmware (noise cancelling, equalizer, touch controls,
+per-earbud battery) needs the maker's own protocol and stays off until an integration exists.
+
+## Brand detection
+Strongest signal first: brand you set yourself, device name (about 40 brands, including common Indian-market ones),
+BLE manufacturer data, the maker name the device reports itself, then a guess from the first word of the name.
+The Info screen shows which signal was used and lets you set the brand by hand.
 
 ## Layers (see `core/`)
 | Layer | Code | What it does |
@@ -46,5 +57,5 @@ The release build is signed with the debug key so it installs for personal use. 
 - The earbuds-versus-headphones guess is a heuristic and is labelled with its confidence.
 
 ## Verification status
-- Pure logic (`core/model`, `core/registry`, `core/capability`, `core/audio`): compiled with kotlinc, 32 unit tests pass.
+- Pure logic (`core/model`, `core/registry`, `core/capability`, `core/audio`): compiled with kotlinc, 47 unit tests pass.
 - Android code (Bluetooth, Room, Compose UI, Gradle) was written carefully and syntax-checked, but **not compiled or run** because no Android SDK was available. Expect a few small compile errors on first sync.

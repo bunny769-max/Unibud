@@ -34,7 +34,15 @@ sealed class ControlCommand(val feature: FeatureId) {
 
     /** Band gains in dB, in the order of [com.unibud.app.core.audio.EqBands.FREQUENCIES_HZ]. */
     data class SetEqualizer(val gainsDb: List<Float>) : ControlCommand(FeatureId.EQUALIZER)
+
+    /** Android media volume, 0 to 100. Drives any Bluetooth earbuds that are the active audio output. */
+    data class SetVolume(val percent: Int) : ControlCommand(FeatureId.VOLUME)
+
+    /** Transport key sent to whichever media app is playing. Works with any earbuds. */
+    data class MediaAction(val key: MediaKey) : ControlCommand(FeatureId.MEDIA_PLAYBACK)
 }
+
+enum class MediaKey { PLAY_PAUSE, NEXT, PREVIOUS }
 
 sealed class ControlResult {
     /** [confirmedBy] describes how the device confirmed the change (for example a read-back). */

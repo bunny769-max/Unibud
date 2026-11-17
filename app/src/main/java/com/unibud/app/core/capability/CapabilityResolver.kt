@@ -6,6 +6,7 @@ import com.unibud.app.core.model.FeatureId
 import com.unibud.app.core.model.FeatureStatus
 import com.unibud.app.core.model.SupportLevel
 import com.unibud.app.core.model.SupportSource
+import com.unibud.app.core.registry.BrandResolver
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
@@ -39,13 +40,15 @@ object CapabilityResolver {
             addAll(findings.flatMap { it.notes })
             addAll(failures)
         }
-        return CapabilityReport(device, features, findings.firstNotNullOfOrNull { it.info }, limitations)
+        val info = findings.mapNotNull { it.info }.reduceOrNull { a, b -> a.mergedWith(b) }
+        val brand = BrandResolver.refine(device.brand, device.name, device.manufacturerIds, info?.manufacturerName)
+        return CapabilityReport(device.copy(brand = brand), features, info, limitations)
     }
 
     private fun defaultReason(device: DiscoveredDevice): String {
         val brand = device.brand?.displayName
         val suffix = if (brand != null) " (no $brand integration is installed yet)" else ""
-        return "Not available through standard Bluetooth. Needs a manufacturer-specific integration$suffix."
+        return "This feature lives in the earbuds' own firmware and needs the maker's protocol$suffix."
     }
 }
 

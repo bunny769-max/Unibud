@@ -51,5 +51,7 @@ object BuiltInPresets {
         EqPreset(-3, "Treble boost", listOf(0f, 0f, 0f, 3f, 5f), builtIn = true),
         EqPreset(-4, "Vocal", listOf(-2f, 0f, 4f, 3f, 0f), builtIn = true),
         EqPreset(-5, "Late night", listOf(3f, 1f, 0f, -1f, -3f), builtIn = true),
+        EqPreset(-6, "Pop", listOf(-1f, 2f, 4f, 2f, -1f), builtIn = true),
+        EqPreset(-7, "Rock", listOf(4f, 2f, -2f, 2f, 4f), builtIn = true),
     )
 }

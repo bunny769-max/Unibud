@@ -8,7 +8,11 @@ enum class ThemeMode {
     }
 }
 
-data class AppSettings(val themeMode: ThemeMode = ThemeMode.SYSTEM, val onboarded: Boolean = false)
+data class AppSettings(
+    val themeMode: ThemeMode = ThemeMode.SYSTEM,
+    val onboarded: Boolean = false,
+    val lastSyncedAt: Long? = null,
+)
 
 /** A device the user has connected before, as remembered on this phone. */
 data class SavedDevice(

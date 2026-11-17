@@ -83,15 +83,31 @@ class PresetRepository(db: AppDatabase) {
 class SettingsRepository(db: AppDatabase) {
     private val dao = db.settingDao()
 
-    fun observe(): Flow<AppSettings> = combine(dao.observe(THEME), dao.observe(ONBOARDED)) { theme, onboarded ->
-        AppSettings(ThemeMode.parse(theme), onboarded == "true")
+    fun observe(): Flow<AppSettings> = combine(
+        dao.observe(THEME), dao.observe(ONBOARDED), dao.observe(LAST_SYNC),
+    ) { theme, onboarded, lastSync ->
+        AppSettings(ThemeMode.parse(theme), onboarded == "true", lastSync?.toLongOrNull())
     }
 
-    suspend fun setTheme(mode: ThemeMode) = dao.put(SettingEntity(THEME, mode.name))
+    suspend fun setTheme(mode: ThemeMode, now: Long = System.currentTimeMillis()) {
+        dao.put(SettingEntity(THEME, mode.name))
+        dao.put(SettingEntity(THEME_UPDATED, now.toString()))
+    }
+
     suspend fun setOnboarded(done: Boolean) = dao.put(SettingEntity(ONBOARDED, done.toString()))
 
-    private companion object {
+    /** A brand the user typed in for a device, kept on this phone only. */
+    suspend fun brandOverride(address: String): String? = dao.get(brandKey(address))
+
+    suspend fun setBrandOverride(address: String, brand: String?) =
+        dao.put(SettingEntity(brandKey(address), brand?.trim().orEmpty()))
+
+    private fun brandKey(address: String) = "brand_override:" + address.lowercase()
+
+    companion object {
         const val THEME = "theme_mode"
+        const val THEME_UPDATED = "theme_updated_at"
         const val ONBOARDED = "onboarded"
+        const val LAST_SYNC = "last_synced_at"
     }
 }

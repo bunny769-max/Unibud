@@ -1,6 +1,8 @@
 package com.unibud.app
 
 import android.app.Application
+import com.unibud.app.data.cloud.AuthRepository
+import com.unibud.app.data.cloud.CloudSyncRepository
 import com.unibud.app.data.local.AppDatabase
 import com.unibud.app.data.repo.DeviceRepository
 import com.unibud.app.data.repo.PresetRepository
@@ -12,6 +14,8 @@ class AppContainer(app: Application) {
     val devices: DeviceRepository by lazy { DeviceRepository(database) }
     val presets: PresetRepository by lazy { PresetRepository(database) }
     val settings: SettingsRepository by lazy { SettingsRepository(database) }
+    val auth: AuthRepository by lazy { AuthRepository(app) }
+    val cloud: CloudSyncRepository by lazy { CloudSyncRepository(database) }
 }
 
 class UniBudApplication : Application() {

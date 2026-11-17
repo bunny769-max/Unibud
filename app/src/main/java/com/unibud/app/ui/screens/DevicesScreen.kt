@@ -1,19 +1,10 @@
 package com.unibud.app.ui.screens
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -23,17 +14,18 @@ import androidx.compose.ui.unit.dp
 import com.unibud.app.core.bluetooth.BluetoothActions
 import com.unibud.app.core.model.DiscoveredDevice
 import com.unibud.app.core.model.SavedDevice
-import com.unibud.app.core.model.SupportLevel
 import com.unibud.app.ui.AppUiState
-import com.unibud.app.ui.components.GlassCard
+import com.unibud.app.ui.brandLabel
+import com.unibud.app.ui.components.GhostButton
+import com.unibud.app.ui.components.GradientButton
+import com.unibud.app.ui.components.NeoPanel
+import com.unibud.app.ui.components.Pill
 import com.unibud.app.ui.components.RadarScan
-import com.unibud.app.ui.components.SectionTitle
-import com.unibud.app.ui.components.StatusPill
+import com.unibud.app.ui.components.SectionLabel
 import com.unibud.app.ui.kindLabel
 import com.unibud.app.ui.relativeTime
 import com.unibud.app.ui.signalLabel
-import com.unibud.app.ui.theme.LocalIsDark
-import com.unibud.app.ui.theme.supportColor
+import com.unibud.app.ui.theme.Neo
 
 @Composable
 fun DevicesScreen(
@@ -45,44 +37,37 @@ fun DevicesScreen(
     onInspect: (DiscoveredDevice) -> Unit,
 ) {
     val context = LocalContext.current
-    val muted = MaterialTheme.colorScheme.onSurfaceVariant
+    val c = Neo.colors
 
     Column(
         Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        GlassCard(Modifier.fillMaxWidth(), corner = 32.dp) {
+        NeoPanel(Modifier.fillMaxWidth(), corner = 28.dp, glow = state.scanning) {
             Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
                 RadarScan(active = state.scanning)
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    if (state.scanning) "Looking for audio devices" else "Ready to scan",
-                    style = MaterialTheme.typography.titleLarge,
-                )
+                Spacer(Modifier.height(6.dp))
+                Text(if (state.scanning) "Looking for audio devices" else "Ready to scan", style = MaterialTheme.typography.titleLarge, color = c.text)
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    "Put your earbuds in pairing mode to find new ones. Scans stop on their own after 12 seconds.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = muted,
+                    "Put your earbuds in pairing mode to find new ones. A scan stops by itself after 12 seconds.",
+                    style = MaterialTheme.typography.bodySmall, color = c.textDim,
                 )
                 Spacer(Modifier.height(14.dp))
                 if (state.permissionGranted) {
-                    Button(onClick = onScan, enabled = !state.scanning) {
-                        Text(if (state.scanning) "Scanning" else "Scan for devices")
-                    }
+                    GradientButton(if (state.scanning) "Scanning" else "Scan for devices", onScan, enabled = !state.scanning)
                 } else {
-                    Button(onClick = onRequestPermission) { Text("Allow Bluetooth access") }
+                    GradientButton("Allow Bluetooth access", onRequestPermission)
                 }
             }
         }
 
-        SectionTitle("Nearby and paired")
+        SectionLabel("Nearby and paired")
         val devices = remember(state.scanResults, state.bonded) { state.visibleDevices }
         if (devices.isEmpty()) {
             Text(
                 if (state.permissionGranted) "No audio devices yet. Scan to look nearby." else "Allow Bluetooth access to see devices.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = muted,
+                style = MaterialTheme.typography.bodyMedium, color = c.textDim,
             )
         }
         devices.forEach { device ->
@@ -98,28 +83,24 @@ fun DevicesScreen(
         val shown = devices.map { it.address }.toSet()
         val others = saved.filter { it.address !in shown }
         if (others.isNotEmpty()) {
-            SectionTitle("Used before on this phone")
+            SectionLabel("Used before on this phone")
             Text(
                 "Android reconnects audio devices itself. Reconnect opens Bluetooth settings.",
-                style = MaterialTheme.typography.bodySmall,
-                color = muted,
+                style = MaterialTheme.typography.bodySmall, color = c.textDim,
             )
             others.forEach { device ->
-                GlassCard(Modifier.fillMaxWidth()) {
+                NeoPanel(Modifier.fillMaxWidth()) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
-                            Text(device.displayName, style = MaterialTheme.typography.titleMedium)
-                            Text(
-                                "Last seen " + relativeTime(device.lastSeenAt),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = muted,
-                            )
+                            Text(device.displayName, style = MaterialTheme.typography.titleMedium, color = c.text)
+                            Text("Last seen " + relativeTime(device.lastSeenAt), style = MaterialTheme.typography.bodySmall, color = c.textDim)
                         }
-                        OutlinedButton(onClick = { BluetoothActions.openBluetoothSettings(context) }) { Text("Reconnect") }
+                        GhostButton("Reconnect", { BluetoothActions.openBluetoothSettings(context) })
                     }
                 }
             }
         }
+        Spacer(Modifier.height(8.dp))
     }
 }
 
@@ -131,43 +112,37 @@ private fun DeviceCard(
     onInspect: () -> Unit,
     onSettings: () -> Unit,
 ) {
-    val dark = LocalIsDark.current
-    val muted = MaterialTheme.colorScheme.onSurfaceVariant
-    GlassCard(Modifier.fillMaxWidth()) {
+    val c = Neo.colors
+    NeoPanel(Modifier.fillMaxWidth(), glow = connected) {
         Row(verticalAlignment = Alignment.Top) {
             Column(Modifier.weight(1f)) {
-                Text(device.name ?: "Unnamed device", style = MaterialTheme.typography.titleMedium)
+                Text(device.name ?: "Unnamed device", style = MaterialTheme.typography.titleMedium, color = c.text)
                 Spacer(Modifier.height(2.dp))
                 Text(
-                    listOfNotNull(kindLabel(device.classification), device.brand?.displayName).joinToString(", "),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = muted,
+                    listOfNotNull(kindLabel(device.classification), brandLabel(device.brand)).joinToString(", "),
+                    style = MaterialTheme.typography.bodySmall, color = c.textDim,
                 )
-                signalLabel(device.rssi)?.let {
-                    Text(it, style = MaterialTheme.typography.bodySmall, color = muted)
-                }
+                signalLabel(device.rssi)?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = c.textDim) }
             }
             when {
-                connected -> StatusPill("Connected", supportColor(SupportLevel.SUPPORTED, dark))
-                device.isBonded -> StatusPill("Paired", MaterialTheme.colorScheme.primary)
-                else -> StatusPill("Nearby", supportColor(SupportLevel.UNAVAILABLE, dark))
+                connected -> Pill("Connected", c.green)
+                device.isBonded -> Pill("Paired", c.violet)
+                else -> Pill("Nearby", c.textDim)
             }
         }
         Spacer(Modifier.height(12.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
             if (!device.isBonded) {
-                Button(onClick = onPair) { Text("Pair") }
+                GradientButton("Pair", onPair)
             } else {
-                Button(onClick = onInspect) { Text("See details") }
-                TextButton(onClick = onSettings) { Text(if (connected) "Disconnect" else "Connect") }
+                GradientButton("See details", onInspect)
+                GhostButton(if (connected) "Disconnect" else "Connect", onSettings)
             }
         }
         if (device.isBonded) {
             Text(
-                "Android connects and disconnects audio, so this opens Bluetooth settings.",
-                style = MaterialTheme.typography.labelSmall,
-                color = muted,
-                modifier = Modifier.padding(top = 4.dp),
+                "Android connects and disconnects audio, so Connect and Disconnect open Bluetooth settings.",
+                style = MaterialTheme.typography.labelSmall, color = c.textDim, modifier = Modifier.padding(top = 6.dp),
             )
         }
     }

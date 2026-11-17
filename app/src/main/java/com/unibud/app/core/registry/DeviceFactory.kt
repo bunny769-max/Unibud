@@ -30,7 +30,7 @@ object DeviceFactory {
             seenOver = (old?.seenOver ?: emptySet()) + transport,
             manufacturerIds = mergedMfr,
             advertisedServices = mergedServices,
-            brand = DeviceDatabase.identify(mergedName, mergedMfr),
+            brand = BrandResolver.resolve(mergedName, mergedMfr),
             classification = DeviceClassifier.classify(mergedName, mergedClass, mergedServices),
         )
     }

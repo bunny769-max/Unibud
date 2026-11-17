@@ -1,118 +1,127 @@
 package com.unibud.app.ui.screens
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.Equalizer
+import androidx.compose.material.icons.rounded.GraphicEq
+import androidx.compose.material.icons.rounded.Hearing
+import androidx.compose.material.icons.rounded.Mic
+import androidx.compose.material.icons.rounded.Pause
+import androidx.compose.material.icons.rounded.RadioButtonChecked
+import androidx.compose.material.icons.rounded.SportsEsports
+import androidx.compose.material.icons.rounded.TouchApp
+import androidx.compose.material.icons.rounded.ViewInAr
+import androidx.compose.material.icons.rounded.WbSunny
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import com.unibud.app.core.capability.ControlCommand
 import com.unibud.app.core.capability.SoundMode
 import com.unibud.app.core.model.CapabilityReport
 import com.unibud.app.core.model.FeatureId
-import com.unibud.app.core.model.FeatureStatus
 import com.unibud.app.core.model.SupportLevel
-import com.unibud.app.ui.components.FeatureRow
-import com.unibud.app.ui.components.GlassCard
-import com.unibud.app.ui.components.SectionTitle
+import com.unibud.app.ui.components.FeatureStatusRow
+import com.unibud.app.ui.components.ModeTile
+import com.unibud.app.ui.components.NeoPanel
+import com.unibud.app.ui.components.SectionLabel
+import com.unibud.app.ui.components.ToggleRow
+import com.unibud.app.ui.theme.Neo
 
-private val groups: List<Pair<String, List<FeatureId>>> = listOf(
-    "Noise control" to listOf(FeatureId.ANC, FeatureId.TRANSPARENCY, FeatureId.NORMAL_MODE, FeatureId.ADAPTIVE_NOISE),
-    "Audio" to listOf(FeatureId.EQUALIZER, FeatureId.SPATIAL_AUDIO, FeatureId.MICROPHONE_SETTINGS, FeatureId.CODEC_INFO),
-    "Gaming" to listOf(FeatureId.LOW_LATENCY),
-    "Touch and sensors" to listOf(
-        FeatureId.TOUCH_CONTROLS, FeatureId.IN_EAR_DETECTION, FeatureId.AUTO_PAUSE, FeatureId.DUAL_CONNECTION,
-    ),
+private class ControlItem(val feature: FeatureId, val icon: ImageVector, val title: String, val subtitle: String)
+
+private val items = listOf(
+    ControlItem(FeatureId.LOW_LATENCY, Icons.Rounded.SportsEsports, "Gaming mode", "Low latency for seamless gaming"),
+    ControlItem(FeatureId.SPATIAL_AUDIO, Icons.Rounded.ViewInAr, "Spatial audio", "Immersive 3D sound"),
+    ControlItem(FeatureId.IN_EAR_DETECTION, Icons.Rounded.Hearing, "In-ear detection", "Knows when you wear them"),
+    ControlItem(FeatureId.AUTO_PAUSE, Icons.Rounded.Pause, "Auto pause", "Pause when removed"),
+    ControlItem(FeatureId.TOUCH_CONTROLS, Icons.Rounded.TouchApp, "Touch controls", "Choose what taps and holds do"),
+    ControlItem(FeatureId.MICROPHONE_SETTINGS, Icons.Rounded.Mic, "Microphone", "Microphone behaviour"),
+    ControlItem(FeatureId.DUAL_CONNECTION, Icons.Rounded.Equalizer, "Dual connection", "Connect to two devices"),
 )
 
-private fun soundModeFor(feature: FeatureId): SoundMode? = when (feature) {
-    FeatureId.ANC -> SoundMode.ANC
-    FeatureId.TRANSPARENCY -> SoundMode.TRANSPARENCY
-    FeatureId.NORMAL_MODE -> SoundMode.NORMAL
-    FeatureId.ADAPTIVE_NOISE -> SoundMode.ADAPTIVE
-    else -> null
-}
-
 @Composable
-fun ControlScreen(report: CapabilityReport?, onExecute: (ControlCommand) -> Unit) {
+fun ControlCenterScreen(report: CapabilityReport?, onExecute: (ControlCommand) -> Unit) {
+    val c = Neo.colors
     Column(
         Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         if (report == null) {
-            GlassCard(Modifier.fillMaxWidth(), corner = 32.dp) {
-                Text("Nothing to control yet", style = MaterialTheme.typography.titleLarge)
+            NeoPanel(Modifier.fillMaxWidth(), corner = 28.dp, glow = true) {
+                Text("Nothing to control yet", style = MaterialTheme.typography.titleLarge, color = c.text)
                 Spacer(Modifier.height(6.dp))
-                Text(
-                    "Connect your earbuds and their controls will appear here.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                Text("Connect your earbuds and their controls will appear here.", style = MaterialTheme.typography.bodyMedium, color = c.textDim)
             }
             return@Column
         }
 
-        GlassCard(Modifier.fillMaxWidth(), corner = 32.dp) {
-            Text("Controls that really work", style = MaterialTheme.typography.titleLarge)
-            Spacer(Modifier.height(6.dp))
-            Text(
-                "A control is only active when your earbuds' brand has a supported integration. Everything else stays switched off and says why.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+        NeoPanel(Modifier.fillMaxWidth(), corner = 28.dp, glow = true) {
+            Text("Noise control", style = MaterialTheme.typography.titleLarge, color = c.text)
+            Spacer(Modifier.height(10.dp))
+            val modes = listOf(
+                Triple("ANC", Icons.Rounded.GraphicEq, SoundMode.ANC),
+                Triple("Transparency", Icons.Rounded.WbSunny, SoundMode.TRANSPARENCY),
+                Triple("Normal", Icons.Rounded.RadioButtonChecked, SoundMode.NORMAL),
+                Triple("Adaptive", Icons.Rounded.AutoAwesome, SoundMode.ADAPTIVE),
+            )
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                modes.forEach { (label, icon, mode) ->
+                    val feature = ControlCommand.SetSoundMode(mode).feature
+                    ModeTile(
+                        label, icon, selected = false, enabled = report.status(feature).level != SupportLevel.UNAVAILABLE,
+                        onClick = { onExecute(ControlCommand.SetSoundMode(mode)) }, modifier = Modifier.weight(1f),
+                    )
+                }
+            }
+            if (modes.none { (_, _, m) -> report.status(ControlCommand.SetSoundMode(m).feature).level != SupportLevel.UNAVAILABLE }) {
+                Spacer(Modifier.height(8.dp))
+                Text(report.status(FeatureId.ANC).reason, style = MaterialTheme.typography.bodySmall, color = c.textDim)
+            }
+        }
+
+        items.forEach { item ->
+            val status = report.status(item.feature)
+            val usable = status.level != SupportLevel.UNAVAILABLE
+            var checked by remember { mutableStateOf(false) }
+            ToggleRow(
+                icon = item.icon, title = item.title,
+                subtitle = if (usable) item.subtitle else status.reason,
+                checked = checked, enabled = usable,
+                onCheckedChange = {
+                    checked = it
+                    if (item.feature == FeatureId.LOW_LATENCY) onExecute(ControlCommand.SetLowLatency(it))
+                },
             )
         }
 
-        groups.forEach { (title, features) ->
-            SectionTitle(title)
-            GlassCard(Modifier.fillMaxWidth()) {
-                features.forEachIndexed { index, feature ->
-                    if (index > 0) {
-                        HorizontalDivider(
-                            Modifier.padding(vertical = 12.dp),
-                            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.25f),
-                        )
-                    }
-                    ControlRow(report.status(feature), onExecute)
-                }
+        SectionLabel("What works on any earbuds")
+        NeoPanel(Modifier.fillMaxWidth()) {
+            listOf(FeatureId.VOLUME, FeatureId.MEDIA_PLAYBACK, FeatureId.CONNECTION_STATUS, FeatureId.FIRMWARE_INFO).forEachIndexed { index, feature ->
+                if (index > 0) Spacer(Modifier.height(12.dp))
+                FeatureStatusRow(report.status(feature))
             }
         }
-    }
-}
 
-@Composable
-private fun ControlRow(status: FeatureStatus, onExecute: (ControlCommand) -> Unit) {
-    val usable = status.level != SupportLevel.UNAVAILABLE
-    FeatureRow(status) {
-        val mode = soundModeFor(status.feature)
-        when {
-            mode != null -> {
-                Spacer(Modifier.height(8.dp))
-                FilledTonalButton(onClick = { onExecute(ControlCommand.SetSoundMode(mode)) }, enabled = usable) {
-                    Text("Switch to this mode")
-                }
-            }
-            status.feature == FeatureId.LOW_LATENCY -> {
-                Spacer(Modifier.height(8.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                    FilledTonalButton(onClick = { onExecute(ControlCommand.SetLowLatency(true)) }, enabled = usable) {
-                        Text("Turn on")
-                    }
-                    OutlinedButton(onClick = { onExecute(ControlCommand.SetLowLatency(false)) }, enabled = usable) {
-                        Text("Turn off")
-                    }
-                }
-            }
+        NeoPanel(Modifier.fillMaxWidth()) {
+            Text("Why are some controls off?", style = MaterialTheme.typography.titleMedium, color = c.text)
+            Spacer(Modifier.height(6.dp))
+            Text(
+                "Noise cancelling, equalizer, touch controls and similar features live inside the earbuds' own firmware. Each maker talks to them in a private language that Android does not share with other apps. " +
+                    "UniBud only shows a control as active when it can really send it, and it never sends commands it does not have documentation for. " +
+                    "Volume and playback use Android itself, so they work on every pair.",
+                style = MaterialTheme.typography.bodySmall, color = c.textDim,
+            )
         }
+        Spacer(Modifier.height(8.dp))
     }
 }

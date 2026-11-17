@@ -14,6 +14,9 @@ interface DeviceDao {
     @Query("SELECT * FROM device_profiles WHERE address = :address")
     suspend fun getProfile(address: String): DeviceProfileEntity?
 
+    @Query("SELECT * FROM device_profiles")
+    suspend fun getAllProfiles(): List<DeviceProfileEntity>
+
     @Upsert
     suspend fun upsertProfile(profile: DeviceProfileEntity)
 
@@ -35,6 +38,9 @@ interface PresetDao {
     @Query("SELECT * FROM eq_presets ORDER BY updatedAt DESC")
     fun observeAll(): Flow<List<EqPresetEntity>>
 
+    @Query("SELECT * FROM eq_presets")
+    suspend fun getAll(): List<EqPresetEntity>
+
     @Insert
     suspend fun insert(preset: EqPresetEntity): Long
 
@@ -49,6 +55,9 @@ interface PresetDao {
 interface SettingDao {
     @Query("SELECT settingValue FROM settings WHERE settingKey = :key")
     fun observe(key: String): Flow<String?>
+
+    @Query("SELECT settingValue FROM settings WHERE settingKey = :key")
+    suspend fun get(key: String): String?
 
     @Upsert
     suspend fun put(setting: SettingEntity)

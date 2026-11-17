@@ -20,6 +20,8 @@ enum class SupportSource(val priority: Int) {
 enum class FeatureId(val label: String) {
     DEVICE_IDENTITY("Device identification"),
     CONNECTION_STATUS("Connection status"),
+    VOLUME("Volume"),
+    MEDIA_PLAYBACK("Media controls"),
     ANC("Active noise cancellation"),
     TRANSPARENCY("Transparency mode"),
     NORMAL_MODE("Normal mode"),
@@ -40,7 +42,10 @@ enum class FeatureId(val label: String) {
     BATTERY_CASE("Charging case battery"),
 }
 
-data class Brand(val id: String, val displayName: String)
+/** How a brand was worked out. GUESS means it was only inferred from the first word of the device name. */
+enum class BrandSource { USER, DEVICE_NAME, MANUFACTURER_DATA, DEVICE_INFO, GUESS }
+
+data class Brand(val id: String, val displayName: String, val source: BrandSource = BrandSource.DEVICE_NAME)
 
 data class Classification(val kind: DeviceKind, val confidence: Confidence, val reason: String)
 
@@ -88,7 +93,32 @@ data class DeviceInfoDetails(
     val leftBatteryPercent: Int? = null,
     val rightBatteryPercent: Int? = null,
     val caseBatteryPercent: Int? = null,
-)
+    /** Android audio route facts. These work for any Bluetooth audio device, whatever the brand. */
+    val audioOutputActive: Boolean? = null,
+    val audioOutputType: String? = null,
+    val audioChannels: List<Int> = emptyList(),
+    val audioSampleRates: List<Int> = emptyList(),
+    /** Only a manufacturer integration can read this. */
+    val activeSoundMode: String? = null,
+) {
+    /** Keeps this value where it has one and fills the gaps from [other]. */
+    fun mergedWith(other: DeviceInfoDetails): DeviceInfoDetails = DeviceInfoDetails(
+        manufacturerName = manufacturerName ?: other.manufacturerName,
+        modelNumber = modelNumber ?: other.modelNumber,
+        firmwareRevision = firmwareRevision ?: other.firmwareRevision,
+        hardwareRevision = hardwareRevision ?: other.hardwareRevision,
+        softwareRevision = softwareRevision ?: other.softwareRevision,
+        batteryPercent = batteryPercent ?: other.batteryPercent,
+        leftBatteryPercent = leftBatteryPercent ?: other.leftBatteryPercent,
+        rightBatteryPercent = rightBatteryPercent ?: other.rightBatteryPercent,
+        caseBatteryPercent = caseBatteryPercent ?: other.caseBatteryPercent,
+        audioOutputActive = audioOutputActive ?: other.audioOutputActive,
+        audioOutputType = audioOutputType ?: other.audioOutputType,
+        audioChannels = audioChannels.ifEmpty { other.audioChannels },
+        audioSampleRates = audioSampleRates.ifEmpty { other.audioSampleRates },
+        activeSoundMode = activeSoundMode ?: other.activeSoundMode,
+    )
+}
 
 data class CapabilityReport(
     val device: DiscoveredDevice,
